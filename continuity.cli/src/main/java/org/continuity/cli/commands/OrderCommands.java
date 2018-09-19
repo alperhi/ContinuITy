@@ -9,6 +9,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 
 import org.continuity.api.entities.config.LoadTestType;
 import org.continuity.api.entities.config.ModularizationApproach;
@@ -26,6 +28,10 @@ import org.continuity.api.rest.RestApi;
 import org.continuity.cli.config.PropertiesProvider;
 import org.continuity.cli.storage.OrderStorage;
 import org.continuity.commons.utils.WebUtils;
+import org.continuity.dsl.description.Context;
+import org.continuity.dsl.description.Covariate;
+import org.continuity.dsl.description.ForecastOptions;
+import org.continuity.dsl.description.NumericalCovariate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -177,6 +183,20 @@ public class OrderCommands {
 		options.setLoadTestType(LoadTestType.JMETER);
 		options.setWorkloadModelType(WorkloadModelType.WESSBAS);
 		order.setOptions(options);
+		
+		NumericalCovariate covar = new NumericalCovariate();
+		covar.setName("Name of the covariate");
+		covar.setValue(0);
+		covar.setDate("future dates the covariate will occur");
+		List<Covariate> covariates = new LinkedList<Covariate>();
+		covariates.add(covar);
+		ForecastOptions forecastOpt = new ForecastOptions();
+		forecastOpt.setForecastPeriod("24");
+		forecastOpt.setInterval("secondly");
+		Context context = new Context();
+		context.setCovariates(covariates);
+		context.setForecastOptions(forecastOpt);
+		order.setContext(context);
 
 		ModularizationOptions modularizationOptions = new ModularizationOptions();
 		HashMap<String, String> services = new HashMap<String, String>();

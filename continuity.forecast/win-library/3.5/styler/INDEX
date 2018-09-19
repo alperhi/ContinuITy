@@ -1,0 +1,12 @@
+create_style_guide      Create a style guide
+has_crlf_as_first_line_sep
+                        Check if a string uses CRLF EOLs
+math_token_spacing      Specify spacing around math tokens
+reindention             Specify what is re-indented how
+style_dir               Prettify arbitrary R code
+style_file              Style '.R' and/or '.Rmd' files
+style_pkg               Prettify R source code
+style_text              Style a string
+styler-package          Non-invasive pretty printing of R code
+tidyverse_style         The tidyverse style
+two_cols_match          Check whether two columns match

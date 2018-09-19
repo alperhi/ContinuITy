@@ -1,0 +1,32 @@
+---
+title: "Google Summer of Code Contributions"
+author: "Lorenz Walthert"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Google Summer of Code Contributions}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r}
+knitr::opts_chunk$set(eval = FALSE)
+```
+
+This vignette aims to summarize the contributions made to styler through Google
+Summer of Code 2017.
+We can use the package `gitsum` to perform an analysis of the GitHub repository.
+```{r}
+library("gitsum")
+library("tidyverse")
+log <- git_log_detailed() %>%
+  filter(date > as.Date("2017-06-01"), date < as.Date("2017-08-31"))
+```
+
+We can see that the vast majority of the commits in this period comes from the 
+student and a few from the main mentor.
+```{r}
+log %>%
+  group_by(author_name) %>%
+  count()
+```

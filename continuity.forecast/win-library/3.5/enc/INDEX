@@ -1,0 +1,7 @@
+                        enc: Portable Tools for 'UTF-8' Character Data
+encoding                Encoding information
+read_lines_enc          Reads from a text file
+to_encoding             Deep conversion to an encoding
+transform_lines_enc     Transform a text file
+utf8                    A simple class for storing UTF-8 strings
+write_lines_enc         Writes to a text file

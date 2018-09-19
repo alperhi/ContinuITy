@@ -1,6 +1,7 @@
 package org.continuity.api.entities.config;
 
 import org.continuity.api.entities.links.LinkExchangeModel;
+import org.continuity.dsl.description.Context;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
@@ -25,6 +26,8 @@ public class TaskDescription {
 
 	@JsonProperty("modularization-options")
 	private ModularizationOptions modularizationOptions;
+	
+	private Context context;
 
 	public String getTaskId() {
 		return taskId;
@@ -72,6 +75,14 @@ public class TaskDescription {
 
 	public void setModularizationOptions(ModularizationOptions modularizationOptions) {
 		this.modularizationOptions = modularizationOptions;
+	}
+	
+	public Context getContext() {
+		return context;
+	}
+
+	public void setContext(Context context) {
+		this.context = context;
 	}
 
 }

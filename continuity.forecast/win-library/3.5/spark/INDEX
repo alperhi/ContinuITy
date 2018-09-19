@@ -1,0 +1,5 @@
+spark                   Generic spark line method for matrices or data
+                        frames, etc.
+spark.default           Spark line of a numeric vector on the terminal
+spark.matrix            Spark lines for rows of a matrix.
+sparklines              Sparklines in the R terminal

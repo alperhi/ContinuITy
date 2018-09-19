@@ -1,0 +1,28 @@
+Package: rcmdcheck
+Title: Run 'R CMD check' from 'R' and Capture Results
+Version: 1.2.1.9005
+Author: Gábor Csárdi
+Maintainer: Gábor Csárdi <csardi.gabor@gmail.com>
+Description: Run 'R CMD check' from 'R' programmatically, and capture the
+    results of the individual checks.
+License: MIT + file LICENSE
+LazyData: true
+URL: https://github.com/r-Lib/rcmdcheck#readme
+BugReports: https://github.com/r-Lib/rcmdcheck/issues
+RoxygenNote: 6.0.1.9000
+Roxygen: list(markdown = TRUE)
+Suggests: covr, testthat
+Imports: callr (>= 2.0.0), clisymbols, crayon, desc, digest,
+        prettyunits, R6, rprojroot, utils, withr
+Encoding: UTF-8
+Built: R 3.5.0; ; 2018-07-11 10:22:49 UTC; windows
+RemoteType: github
+RemoteHost: https://api.github.com
+RemoteRepo: rcmdcheck
+RemoteUsername: r-lib
+RemoteRef: master
+RemoteSha: ad42561aa6e06297367455546b6312dcf59282b6
+GithubRepo: rcmdcheck
+GithubUsername: r-lib
+GithubRef: master
+GithubSHA1: ad42561aa6e06297367455546b6312dcf59282b6

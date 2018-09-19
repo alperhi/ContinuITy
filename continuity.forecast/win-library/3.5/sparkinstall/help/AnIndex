@@ -1,0 +1,10 @@
+spark_available_versions	spark_install
+spark_configure	spark_configure
+spark_default_version	spark_default_version
+spark_install	spark_install
+spark_installed_versions	spark_install
+spark_install_dir	spark_install
+spark_install_find	spark_install
+spark_install_tar	spark_install
+spark_uninstall	spark_install
+spark_versions	spark_versions

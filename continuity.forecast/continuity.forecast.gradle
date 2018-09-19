@@ -1,0 +1,58 @@
+
+apply plugin: 'org.springframework.boot'
+apply plugin: 'io.spring.dependency-management'
+
+dependencyManagement {
+	imports {
+		mavenBom 'org.springframework.cloud:spring-cloud-starter-parent:Finchley.M4'
+	}
+}
+
+dependencies {
+	compile project(':continuity.api')
+	compile project(':continuity.commons')
+	compile project(':continuity.dsl')
+	
+	compile files('lib/behaviormodelextractor_forecast.jar')
+	compile files('lib/commons-cli-20040117.000000.jar')
+	compile files('lib/org.apache.commons.io_2.0.1.v201105210651.jar')
+	compile files('lib/org.apache.commons.lang_2.6.0.v201205030909.jar')
+	compile files('lib/weka.jar')
+	compile files('lib/wessbas.commons.jar')
+	compile files('lib/JRI.jar')
+	compile files('lib/JRIEngine.jar')
+	compile files('lib/REngine.jar')
+
+	// Spring Boot
+	
+	compile("org.springframework.boot:spring-boot-starter-web")
+	compile("org.springframework.boot:spring-boot-starter-amqp")
+	compile("org.springframework.cloud:spring-cloud-starter-netflix-eureka-client")
+	
+	testCompile("org.springframework.boot:spring-boot-starter-test")
+	
+	// Swagger
+	
+	compile("io.springfox:springfox-swagger2:2.7.0")
+	compile("io.springfox:springfox-swagger-ui:2.7.0")
+	
+	// Required for Eclipse
+	compile("org.codehaus.groovy:groovy-all:2.4.7")
+	
+	// InfluxDB
+	compile("org.influxdb:influxdb-java:2.10")
+	
+}
+
+group = 'continuityproject'
+
+apply plugin: 'com.palantir.docker'
+
+docker {
+	name "${project.group}/forecast"
+	files jar.archivePath
+	copySpec.from('.') {
+		include 'configuration/**'
+	}
+	buildArgs(['JAR_FILE': "${jar.archiveName}"])
+}

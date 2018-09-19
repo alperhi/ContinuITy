@@ -1,0 +1,14 @@
+Name: Style package
+Description: Pretty-print package source code
+Binding: style_pkg
+Interactive: true
+
+Name: Style active file
+Description: Pretty-print active file
+Binding: style_active_file
+Interactive: true
+
+Name: Style selection
+Description: Pretty-print selection
+Binding: style_selection
+Interactive: true

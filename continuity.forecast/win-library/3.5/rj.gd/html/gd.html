@@ -1,0 +1,90 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><title>R: Create a new RJ graphics device</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link rel="stylesheet" type="text/css" href="R.css" />
+</head><body>
+
+<table width="100%" summary="page for rj.gd {rj.gd}"><tr><td>rj.gd {rj.gd}</td><td style="text-align: right;">R Documentation</td></tr></table>
+
+<h2>
+Create a new RJ graphics device
+</h2>
+
+<h3>Description</h3>
+
+<p><code>.rj.GD</code> initializes a new graphics device. If supported, the new device is
+shown in a new window/page in the client application.
+</p>
+
+
+<h3>Usage</h3>
+
+<pre>
+.rj.GD(name = "rj.gd", width = 7, height = 7, size.unit = "in",
+    xpinch = NA, ypinch = NA, canvas = "white",
+    pointsize = 12, gamma = 1.0)
+</pre>
+
+
+<h3>Arguments</h3>
+
+<table summary="R argblock">
+<tr valign="top"><td><code>name</code></td>
+<td>
+<p>Name of the device (unused)</p>
+</td></tr>
+<tr valign="top"><td><code>width, height</code></td>
+<td>
+<p>Initial size (number) of the graphic window, for horizontal and vertical
+orientation.
+The unit of the values are inch, if not otherwise specified by the argument <code>size.unit</code>.
+The default size is 7 x 7 inch.</p>
+</td></tr>
+<tr valign="top"><td><code>size.unit</code></td>
+<td>
+<p>The unit (known character) of the size values in <code>width</code> and <code>height</code>.
+Supported units are inch (<code>"in"</code>) and pixels (<code>"px"</code>).  The default unit is inch.</p>
+</td></tr>
+<tr valign="top"><td><code>xpinch, ypinch</code></td>
+<td>
+<p>The resolution of the device (number), pixel per inch (ppi), for
+horizontal and vertical orientation.
+By default the values are specified by the client application.</p>
+</td></tr>
+<tr valign="top"><td><code>canvas</code></td>
+<td>
+<p>The color (R color) of the canvas which is visible when the background color is 
+transparent.
+The default color is <code>"white"</code>.</p>
+</td></tr>
+<tr valign="top"><td><code>pointsize</code></td>
+<td>
+<p>The default pointsize (number) of plotted text in big points (1/72 inch).
+Values are rounded to the nearest integer. The default text size is 12 pt.</p>
+</td></tr>
+<tr valign="top"><td><code>gamma</code></td>
+<td>
+<p>Gamma correction factor as number (not the gamma value itself).
+Colors in R are defined for the color space sRGB.  If your monitor does not conform to sRGB, 
+you might be able to improve things by tweaking this parameter to apply additional gamma 
+correction to the RGB channels.  The default is no additional gamma correction (<code>1.0</code>).</p>
+</td></tr>
+</table>
+
+
+<h3>Value</h3>
+
+<p>Currently the return value is NULL.
+</p>
+
+
+<h3>Examples</h3>
+
+<pre>
+## Not run: 
+.rj.GD()
+
+## End(Not run)
+</pre>
+
+<hr /><div style="text-align: center;">[Package <em>rj.gd</em> version 2.1.0-2 <a href="00Index.html">Index</a>]</div>
+</body></html>

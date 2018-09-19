@@ -47,7 +47,8 @@ public class SessionLogsAmqpHandler {
 		TaskReport report;
 		String tag = task.getTag();
 		String link = task.getSource().getExternalDataLinks().getLink();
-		boolean useOpenXtrace = task.getSource().getExternalDataLinks().getLinkType().equals(ExternalDataLinkType.OPEN_XTRACE) ? true : false;
+		//boolean useOpenXtrace = task.getSource().getExternalDataLinks().getLinkType().equals(ExternalDataLinkType.OPEN_XTRACE) ? true : false;
+		boolean useOpenXtrace = false;
 		boolean applyModularization = false;
 
 		if (null != task.getModularizationOptions()) {
@@ -70,7 +71,7 @@ public class SessionLogsAmqpHandler {
 				sessionLog = manager.runPipeline(useOpenXtrace, task.getModularizationOptions().getServices());
 			} else {
 				LOGGER.info("Task {}: Creating session logs for tag {} from data {} ...", task.getTaskId(), tag, link);
-				sessionLog = manager.runPipeline(useOpenXtrace);
+				sessionLog = manager.runPipeline(useOpenXtrace, true);
 			}
 			String id = storage.put(new SessionLogs(task.getSource().getExternalDataLinks().getTimestamp(), sessionLog), tag);
 			String sessionLink = RestApi.SessionLogs.GET.requestUrl(id).withoutProtocol().get();

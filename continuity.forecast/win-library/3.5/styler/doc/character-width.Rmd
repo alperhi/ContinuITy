@@ -1,0 +1,32 @@
+---
+title: "Character Width"
+author: "Lorenz Walthert"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Character Width}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+The goal of this vignette is to find the optimal way of enforcing a character
+width with styler.
+
+* Apply all transformers with `apply_transformers()`.
+* Compute absolute token positions in `enrich_terminals()`.
+* Changing line breaks, which invalidates line breaks, newline multi-line 
+  attributes, spacing (because of indention) and potentially token. Use a 
+  tranformer function that operates on flattened_out pds.
+* Possibly using a recursion and (if unavoidable) a (while) loop to re-apply
+  transformers.
+* Again compute absoulte positions.
+* Compute necessary line breaks.
+
+Once done (i.e. nothing changes anymore), proceed with `apply_ref_indention()`.
