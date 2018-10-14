@@ -1,5 +1,8 @@
 package org.continuity.dsl.description;
 
+import java.util.Date;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
@@ -12,10 +15,17 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 @JsonPropertyOrder({ "forecast-period", "interval" })
 public class ForecastOptions {
 
-	@JsonProperty("forecast-period")
-	private String forecastPeriod;
+	@JsonProperty("forecast-date")
+	private long forecastDate;
 	
 	private String interval;
+	
+	@SuppressWarnings("deprecation")
+	@JsonCreator
+    public ForecastOptions(@JsonProperty(value = "forecast-date", required = true) String forecastPeriod, @JsonProperty(value = "interval", required = true) String interval) {
+    	this.forecastDate = Date.parse(forecastPeriod);
+    	this.interval = interval;
+    }
 
 	public String getInterval() {
 		return interval;
@@ -30,8 +40,8 @@ public class ForecastOptions {
 	 * 
 	 * @return The period of the workload forecast.
 	 */
-	public String getForecastPeriod() {
-		return forecastPeriod;
+	public long getForecastPeriod() {
+		return forecastDate;
 	}
 
 	/**
@@ -39,13 +49,13 @@ public class ForecastOptions {
 	 * 
 	 * @param forecastPeriod The period of the workload forecast.
 	 */
-	public void setForecastPeriod(String forecastPeriod) {
-		this.forecastPeriod = forecastPeriod;
+	public void setForecastPeriod(long forecastPeriod) {
+		this.forecastDate = forecastPeriod;
 	}
 
 	@Override
 	public String toString() {
-		return "Forecast [period=" + forecastPeriod + "]";
+		return "Forecast [forecast-date=" + forecastDate + "]";
 	}
 
 }

@@ -1,9 +1,15 @@
 package org.continuity.forecast.amqp;
 
+import java.util.Date;
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+
+import org.apache.commons.math3.util.Pair;
 import org.continuity.api.amqp.AmqpApi;
 import org.continuity.api.entities.artifact.ForecastBundle;
 import org.continuity.api.entities.config.TaskDescription;
 import org.continuity.api.entities.links.LinkExchangeModel;
+import org.continuity.api.entities.links.SessionsStatus;
 import org.continuity.api.entities.report.TaskError;
 import org.continuity.api.entities.report.TaskReport;
 import org.continuity.api.rest.RestApi;
@@ -11,6 +17,7 @@ import org.continuity.commons.storage.MixedStorage;
 import org.continuity.forecast.config.RabbitMqConfig;
 import org.continuity.forecast.controllers.ForecastController;
 import org.continuity.forecast.managers.ForecastPipelineManager;
+import org.continuity.forecast.managers.IntensitiesPipelineManager;
 import org.influxdb.InfluxDB;
 import org.influxdb.InfluxDBFactory;
 import org.slf4j.Logger;
@@ -41,6 +48,9 @@ public class ForecastAmqpHandler {
 	
 	@Autowired
 	private MixedStorage<ForecastBundle> storage;
+	
+	@Autowired
+	private ConcurrentHashMap<String, Pair<Date, Integer>> dateAndAmountOfUsersStorage;
 
 	@Value("${spring.application.name}")
 	private String applicationName;
@@ -58,6 +68,8 @@ public class ForecastAmqpHandler {
 		LOGGER.info("Task {}: Received new task to be processed for tag '{}'", task.getTaskId(), task.getTag());
 		
 		String linkToSessions = task.getSource().getSessionsBundlesLinks().getLink();
+		
+		List<String> pathParams = RestApi.Wessbas.SessionsBundles.GET.parsePathParameters(linkToSessions);
 
 		TaskReport report;
 
@@ -66,8 +78,19 @@ public class ForecastAmqpHandler {
 			report = TaskReport.error(task.getTaskId(), TaskError.MISSING_SOURCE);
 		} else {
 			InfluxDB influxDb = InfluxDBFactory.connect("http://127.0.0.1:8086", "admin", "admin");
-			ForecastPipelineManager pipelineManager = new ForecastPipelineManager(restTemplate, influxDb, task.getTag(), task.getContext());
-			ForecastBundle forecastBundle = pipelineManager.runPipeline(linkToSessions);
+			
+			boolean statusChanged = task.getSource().getSessionsBundlesLinks().getStatus().equals(SessionsStatus.CHANGED) ? true : false;
+			
+			// calculate new intensities
+			if(statusChanged) {
+				IntensitiesPipelineManager intensitiesPipelineManager = new IntensitiesPipelineManager(restTemplate, influxDb, task.getTag(), task.getContext());
+				intensitiesPipelineManager.runPipeline(linkToSessions);
+				Pair<Date, Integer> dateAndAmountOfUserGroups = intensitiesPipelineManager.getDateAndAmountOfUserGroups();
+				dateAndAmountOfUsersStorage.put(pathParams.get(0), dateAndAmountOfUserGroups);
+			} 
+			
+			ForecastPipelineManager pipelineManager = new ForecastPipelineManager(influxDb, task.getTag(), task.getContext());
+			ForecastBundle forecastBundle = pipelineManager.runPipeline(dateAndAmountOfUsersStorage.get(pathParams.get(0)));
 			influxDb.close();
 
 			if (forecastBundle == null) {

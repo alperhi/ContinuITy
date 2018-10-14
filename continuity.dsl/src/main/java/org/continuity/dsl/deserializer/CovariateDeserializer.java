@@ -2,11 +2,9 @@ package org.continuity.dsl.deserializer;
 
 import java.io.IOException;
 
-import org.continuity.dsl.description.BooleanCovariate;
+import org.continuity.dsl.description.ContinuousData;
 import org.continuity.dsl.description.Covariate;
-import org.continuity.dsl.description.ListCovariate;
-import org.continuity.dsl.description.NumericalCovariate;
-import org.continuity.dsl.description.StringCovariate;
+import org.continuity.dsl.description.Event;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -32,16 +30,12 @@ public class CovariateDeserializer extends JsonDeserializer<Covariate> {
 
 		Covariate covariate = null;
 
-		if (root.has("value")) {
-			if (root.get("value").isTextual()) {
-				covariate = mapper.readValue(root.toString(), StringCovariate.class);
-			} else if (root.get("value").isBoolean()) {
-				covariate = mapper.readValue(root.toString(), BooleanCovariate.class);
-			} else if (root.get("value").isNumber()) {
-				covariate = mapper.readValue(root.toString(), NumericalCovariate.class);
-			} else if (root.get("value").isArray()) {
-				covariate = mapper.readValue(root.toString(), ListCovariate.class);
-			}
+		if (root.has("location-name") && root.has("covar") && root.has("future-dates")) {
+			covariate = mapper.readValue(root.toString(), Event.class);
+		} else if (root.has("location-name")) {
+			covariate = mapper.readValue(root.toString(), ContinuousData.class);
+		} else {
+			throw new IOException("Invalid context input!");
 		}
 		return covariate;
 	}

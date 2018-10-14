@@ -66,8 +66,8 @@ public class WessbasAmqpHandler {
 
 		TaskReport report;
 
-		if (task.getSource().getSessionLogsLinks().getLink() == null) {
-			LOGGER.error("Task {}: Session logs link is missing for tag {}!", task.getTaskId(), task.getTag());
+		if (task.getSource().getSessionLogsLinks().getLink() == null && task.getSource().getForecastLinks().getLink() == null) {
+			LOGGER.error("Task {}: Session logs link and forecast link is missing for tag {}!", task.getTaskId(), task.getTag());
 			report = TaskReport.error(task.getTaskId(), TaskError.MISSING_SOURCE);
 		} else {
 			WessbasBundle workloadModel = null;

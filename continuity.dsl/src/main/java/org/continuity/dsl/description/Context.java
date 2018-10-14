@@ -2,6 +2,7 @@ package org.continuity.dsl.description;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
@@ -18,6 +19,12 @@ public class Context {
 
 	@JsonProperty("forecast-options")
 	private ForecastOptions forecastOptions;
+	
+	@JsonCreator
+    public Context(@JsonProperty(value = "covariates", required = true) List<Covariate> covariates, @JsonProperty(value = "forecast-options", required = true) ForecastOptions forecastOptions) {
+    	this.covariates = covariates;
+    	this.forecastOptions = forecastOptions;
+    }
 
 	/**
 	 * Returns context covariates for the workload forecasting.
