@@ -1,10 +1,14 @@
 package org.continuity.dsl.description;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 /**
  * Further information for the workload forecasting.
@@ -12,20 +16,36 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
  * @author Alper Hidiroglu
  *
  */
-@JsonPropertyOrder({ "forecast-period", "interval" })
+@JsonPropertyOrder({ "forecast-date", "interval", "forecaster" })
 public class ForecastOptions {
 
 	@JsonProperty("forecast-date")
-	private long forecastDate;
+	@JsonSerialize(converter=ForecastDateConverter.class)
+	private Date forecastDate;
 	
 	private String interval;
 	
-	@SuppressWarnings("deprecation")
+	private String forecaster;
+
+	@JsonIgnore
+	SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+	
 	@JsonCreator
-    public ForecastOptions(@JsonProperty(value = "forecast-date", required = true) String forecastPeriod, @JsonProperty(value = "interval", required = true) String interval) {
-    	this.forecastDate = Date.parse(forecastPeriod);
+    public ForecastOptions(@JsonProperty(value = "forecast-date", required = true) String forecastPeriod, @JsonProperty(value = "interval", required = true) String interval
+    		,@JsonProperty(value = "forecaster", required = true) String forecaster) {
+    	this.forecastDate = null;
+    	try {
+		    forecastDate = dateFormat.parse(forecastPeriod);
+		} catch (ParseException e) {
+		    e.printStackTrace();
+		}
+    	this.forecaster = forecaster;
     	this.interval = interval;
     }
+	
+	public ForecastOptions() {
+		
+	}
 
 	public String getInterval() {
 		return interval;
@@ -40,7 +60,7 @@ public class ForecastOptions {
 	 * 
 	 * @return The period of the workload forecast.
 	 */
-	public long getForecastPeriod() {
+	public Date getForecastDate() {
 		return forecastDate;
 	}
 
@@ -49,13 +69,26 @@ public class ForecastOptions {
 	 * 
 	 * @param forecastPeriod The period of the workload forecast.
 	 */
-	public void setForecastPeriod(long forecastPeriod) {
-		this.forecastDate = forecastPeriod;
+	public void setForecastDate(Date forecastDate) {
+		this.forecastDate = forecastDate;
+	}
+	
+	public String getForecaster() {
+		return forecaster;
+	}
+
+	public void setForecaster(String forecaster) {
+		this.forecaster = forecaster;
+	}
+	
+	@JsonIgnore
+	public long getDateAsTimestamp() {
+		// 13 digits
+		return this.forecastDate.getTime();
 	}
 
 	@Override
 	public String toString() {
 		return "Forecast [forecast-date=" + forecastDate + "]";
-	}
-
+	}	
 }

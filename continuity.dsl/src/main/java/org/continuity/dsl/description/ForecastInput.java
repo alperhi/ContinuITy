@@ -13,7 +13,7 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
  *
  */
 @JsonPropertyOrder({ "covariates", "forecast-options" })
-public class Context {
+public class ForecastInput {
 
 	private List<Covariate> covariates;
 
@@ -21,10 +21,14 @@ public class Context {
 	private ForecastOptions forecastOptions;
 	
 	@JsonCreator
-    public Context(@JsonProperty(value = "covariates", required = true) List<Covariate> covariates, @JsonProperty(value = "forecast-options", required = true) ForecastOptions forecastOptions) {
+    public ForecastInput(@JsonProperty(value = "covariates", required = true) List<Covariate> covariates, @JsonProperty(value = "forecast-options", required = true) ForecastOptions forecastOptions) {
     	this.covariates = covariates;
     	this.forecastOptions = forecastOptions;
     }
+	
+	public ForecastInput() {
+		
+	}
 
 	/**
 	 * Returns context covariates for the workload forecasting.
@@ -65,7 +69,7 @@ public class Context {
 
 	@Override
 	public String toString() {
-		return "Description [covariates=" + covariates + ", forecastOptions=" + forecastOptions + "]";
+		return "Forecast-Input [covariates=" + covariates + ", forecastOptions=" + forecastOptions + "]";
 	}
 
 }

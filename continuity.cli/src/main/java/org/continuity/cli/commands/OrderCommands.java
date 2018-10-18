@@ -30,9 +30,9 @@ import org.continuity.api.rest.RestApi;
 import org.continuity.cli.config.PropertiesProvider;
 import org.continuity.cli.storage.OrderStorage;
 import org.continuity.commons.utils.WebUtils;
-import org.continuity.dsl.description.Context;
+import org.continuity.dsl.description.ForecastInput;
+import org.continuity.dsl.description.ContinuousData;
 import org.continuity.dsl.description.Covariate;
-import org.continuity.dsl.description.Event;
 import org.continuity.dsl.description.ForecastOptions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -186,15 +186,17 @@ public class OrderCommands {
 		options.setWorkloadModelType(WorkloadModelType.WESSBAS);
 		order.setOptions(options);
 		
-		String date = "dd/mm/yyyy to dd/mm/yyyy";
-		ArrayList<String> dates = new ArrayList<String>();
-		dates.add(date);
-		Event event = new Event("measurement name containing occurrences of the covariate", "covariate", dates);
+		ContinuousData contData = new ContinuousData();
+		contData.setLocationName("measurement name containing occurrences of the covariate");
 		List<Covariate> covariates = new LinkedList<Covariate>();
-		covariates.add(event);
-		ForecastOptions forecastOpt = new ForecastOptions("date until when the forecast should go to", "either secondly, minutely, hourly or daily");
-		Context context = new Context(covariates, forecastOpt);
-		order.setContext(context);
+		covariates.add(contData);
+		ForecastOptions forecastOpt = new ForecastOptions();
+		forecastOpt.setInterval("daily, hourly, minutely or secondly");
+		forecastOpt.setForecaster("telescope or prophet");
+		ForecastInput forecastInput = new ForecastInput();
+		forecastInput.setCovariates(covariates);
+		forecastInput.setForecastOptions(forecastOpt);
+		order.setForecastInput(forecastInput);
 
 		ModularizationOptions modularizationOptions = new ModularizationOptions();
 		HashMap<String, String> services = new HashMap<String, String>();

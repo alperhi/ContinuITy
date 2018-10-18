@@ -32,7 +32,7 @@ public class CovariateDeserializer extends JsonDeserializer<Covariate> {
 
 		if (root.has("location-name") && root.has("covar") && root.has("future-dates")) {
 			covariate = mapper.readValue(root.toString(), Event.class);
-		} else if (root.has("location-name")) {
+		} else if (root.has("location-name") && (!root.has("covar"))) {
 			covariate = mapper.readValue(root.toString(), ContinuousData.class);
 		} else {
 			throw new IOException("Invalid context input!");

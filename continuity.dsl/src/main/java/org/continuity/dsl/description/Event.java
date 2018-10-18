@@ -1,10 +1,13 @@
 package org.continuity.dsl.description;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 /**
  * Represents the event context type.
@@ -20,14 +23,19 @@ public class Event implements Covariate {
 
 	private String covar;
 	
-	// Parsen des Strings und speichern der einzelnen Teile in ein Objekt.
+	@JsonProperty("future-dates")
+	@JsonSerialize(converter=FutureOccurrencesConverter.class)
 	private FutureOccurrences futureDates;
 	
     @JsonCreator
-    public Event(@JsonProperty(value = "location-name", required = true) String locationName, @JsonProperty(value = "covar", required = true) String covar, @JsonProperty(value = "future-dates", required = true) ArrayList<String> futureDates) {
+    public Event(@JsonProperty(value = "location-name", required = true) String locationName, @JsonProperty(value = "covar", required = true) String covar, @JsonProperty(value = "future-dates", required = true) List<String> futureDates) {
     	this.locationName = locationName;
         this.covar = covar;
         this.futureDates = new FutureOccurrences(futureDates);
+    }
+    
+    public Event() {
+    	
     }
     
 	public String getLocationName() {
@@ -46,10 +54,12 @@ public class Event implements Covariate {
 		this.covar = covar;
 	}
 
+	@JsonIgnore
 	public FutureOccurrences getFutureDates() {
 		return futureDates;
 	}
 
+	@JsonIgnore
 	public void setFutureDates(ArrayList<String> futureDates) {
 		this.futureDates = new FutureOccurrences(futureDates);
 	}

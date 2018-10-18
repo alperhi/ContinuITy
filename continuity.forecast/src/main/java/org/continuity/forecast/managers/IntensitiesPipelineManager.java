@@ -14,7 +14,7 @@ import org.continuity.api.entities.artifact.SessionsBundle;
 import org.continuity.api.entities.artifact.SessionsBundlePack;
 import org.continuity.api.entities.artifact.SimplifiedSession;
 import org.continuity.commons.utils.WebUtils;
-import org.continuity.dsl.description.Context;
+import org.continuity.dsl.description.ForecastInput;
 import org.influxdb.BatchOptions;
 import org.influxdb.InfluxDB;
 import org.influxdb.dto.Point;
@@ -39,7 +39,7 @@ public class IntensitiesPipelineManager {
 	
 	private String tag;
 	
-	private Context context;
+	private ForecastInput forecastInput;
 	
 	private Pair<Date, Integer> dateAndAmountOfUserGroups;
 
@@ -65,11 +65,11 @@ public class IntensitiesPipelineManager {
 	/**
 	 * Constructor.
 	 */
-	public IntensitiesPipelineManager(RestTemplate restTemplate, InfluxDB influxDb, String tag, Context context) {
+	public IntensitiesPipelineManager(RestTemplate restTemplate, InfluxDB influxDb, String tag, ForecastInput context) {
 		this.restTemplate = restTemplate;
 		this.influxDb = influxDb;
 		this.tag = tag;
-		this.context = context;
+		this.forecastInput = context;
 	}
 	
 	public IntensitiesPipelineManager() {
@@ -132,7 +132,7 @@ public class IntensitiesPipelineManager {
 		long startTime = sessions.get(0).getStartTime();
 		
 		// The time range for which an intensity will be calculated
-		long rangeLength = calculateInterval(context.getForecastOptions().getInterval());
+		long rangeLength = calculateInterval(forecastInput.getForecastOptions().getInterval());
 		
 		// rounds start time down
 		long roundedStartTime = startTime - startTime % rangeLength;

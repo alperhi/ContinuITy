@@ -55,17 +55,17 @@ public class CovariateDataManager {
 			Point point = null;
 			if(value instanceof StringCovariateValue) {
 				point = Point.measurement(covarName)
-					.time(((StringCovariateValue) value).getTimestamp(), TimeUnit.NANOSECONDS)
+					.time(((StringCovariateValue) value).getTimestamp(), TimeUnit.MILLISECONDS)
 				    .addField("value", ((StringCovariateValue) value).getValue()) 
 					.build();
 			} else if(value instanceof BooleanCovariateValue) {
 				point = Point.measurement(covarName)
-						.time(((BooleanCovariateValue) value).getTimestamp(), TimeUnit.NANOSECONDS)
+						.time(((BooleanCovariateValue) value).getTimestamp(), TimeUnit.MILLISECONDS)
 					    .addField("value", ((BooleanCovariateValue) value).isValue()) 
 						.build();
 			} else if(value instanceof NumericalCovariateValue) {
 				point = Point.measurement(covarName)
-						.time(((NumericalCovariateValue) value).getTimestamp(), TimeUnit.NANOSECONDS)
+						.time(((NumericalCovariateValue) value).getTimestamp(), TimeUnit.MILLISECONDS)
 					    .addField("value", ((NumericalCovariateValue) value).getValue()) 
 						.build();
 			}

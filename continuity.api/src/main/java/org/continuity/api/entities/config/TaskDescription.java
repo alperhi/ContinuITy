@@ -1,7 +1,7 @@
 package org.continuity.api.entities.config;
 
 import org.continuity.api.entities.links.LinkExchangeModel;
-import org.continuity.dsl.description.Context;
+import org.continuity.dsl.description.ForecastInput;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
@@ -27,7 +27,7 @@ public class TaskDescription {
 	@JsonProperty("modularization-options")
 	private ModularizationOptions modularizationOptions;
 	
-	private Context context;
+	private ForecastInput forecastInput;
 
 	public String getTaskId() {
 		return taskId;
@@ -77,12 +77,12 @@ public class TaskDescription {
 		this.modularizationOptions = modularizationOptions;
 	}
 	
-	public Context getContext() {
-		return context;
+	public ForecastInput getForecastInput() {
+		return forecastInput;
 	}
 
-	public void setContext(Context context) {
-		this.context = context;
+	public void setForecastInput(ForecastInput forecastInput) {
+		this.forecastInput = forecastInput;
 	}
 
 }

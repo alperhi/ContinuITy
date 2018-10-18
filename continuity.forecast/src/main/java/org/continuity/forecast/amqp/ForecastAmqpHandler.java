@@ -83,13 +83,13 @@ public class ForecastAmqpHandler {
 			
 			// calculate new intensities
 			if(statusChanged) {
-				IntensitiesPipelineManager intensitiesPipelineManager = new IntensitiesPipelineManager(restTemplate, influxDb, task.getTag(), task.getContext());
+				IntensitiesPipelineManager intensitiesPipelineManager = new IntensitiesPipelineManager(restTemplate, influxDb, task.getTag(), task.getForecastInput());
 				intensitiesPipelineManager.runPipeline(linkToSessions);
 				Pair<Date, Integer> dateAndAmountOfUserGroups = intensitiesPipelineManager.getDateAndAmountOfUserGroups();
 				dateAndAmountOfUsersStorage.put(pathParams.get(0), dateAndAmountOfUserGroups);
 			} 
 			
-			ForecastPipelineManager pipelineManager = new ForecastPipelineManager(influxDb, task.getTag(), task.getContext());
+			ForecastPipelineManager pipelineManager = new ForecastPipelineManager(influxDb, task.getTag(), task.getForecastInput());
 			ForecastBundle forecastBundle = pipelineManager.runPipeline(dateAndAmountOfUsersStorage.get(pathParams.get(0)));
 			influxDb.close();
 

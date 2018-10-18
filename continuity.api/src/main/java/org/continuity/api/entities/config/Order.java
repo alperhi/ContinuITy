@@ -3,14 +3,14 @@ package org.continuity.api.entities.config;
 import java.util.Set;
 
 import org.continuity.api.entities.links.LinkExchangeModel;
-import org.continuity.dsl.description.Context;
+import org.continuity.dsl.description.ForecastInput;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
-@JsonPropertyOrder({ "goal", "mode", "tag", "testing-context", "options", "source", "context" })
+@JsonPropertyOrder({ "goal", "mode", "tag", "testing-context", "options", "source", "forecast-input" })
 public class Order {
 
 	private String tag;
@@ -31,7 +31,8 @@ public class Order {
 	private OrderOptions options;
 	
 	@JsonInclude(Include.NON_NULL)
-	private Context context;
+	@JsonProperty("forecast-input")
+	private ForecastInput forecastInput;
 
 	@JsonProperty("modularization")
 	@JsonInclude(Include.NON_NULL)
@@ -93,12 +94,12 @@ public class Order {
 		this.modularizationOptions = modularizationOptions;
 	}
 	
-	public Context getContext() {
-		return context;
+	public ForecastInput getForecastInput() {
+		return forecastInput;
 	}
 
-	public void setContext(Context context) {
-		this.context = context;
+	public void setForecastInput(ForecastInput forecastInput) {
+		this.forecastInput = forecastInput;
 	}
 
 }

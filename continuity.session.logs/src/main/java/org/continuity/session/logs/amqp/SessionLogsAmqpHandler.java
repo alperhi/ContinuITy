@@ -49,7 +49,7 @@ public class SessionLogsAmqpHandler {
 		String link = task.getSource().getExternalDataLinks().getLink();
 		//boolean useOpenXtrace = task.getSource().getExternalDataLinks().getLinkType().equals(ExternalDataLinkType.OPEN_XTRACE) ? true : false;
 		boolean useOpenXtrace = false;
-		boolean useCSV = false;
+		boolean useCSV = true;
 		boolean applyModularization = false;
 
 		if (null != task.getModularizationOptions()) {

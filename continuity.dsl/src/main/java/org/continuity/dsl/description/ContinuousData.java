@@ -20,6 +20,10 @@ public class ContinuousData implements Covariate {
     	this.locationName = locationName;
     }
 	
+	public ContinuousData() {
+		
+	}
+	
 	public String getLocationName() {
 		return locationName;
 	}
