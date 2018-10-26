@@ -42,10 +42,6 @@ public class ForecastOptions {
     	this.forecaster = forecaster;
     	this.interval = interval;
     }
-	
-	public ForecastOptions() {
-		
-	}
 
 	public String getInterval() {
 		return interval;
@@ -89,6 +85,6 @@ public class ForecastOptions {
 
 	@Override
 	public String toString() {
-		return "Forecast [forecast-date=" + forecastDate + "]";
+		return "Forecast [forecast-date=" + forecastDate + ", interval=" + interval + ", forecaster=" + forecaster + "]";
 	}	
 }

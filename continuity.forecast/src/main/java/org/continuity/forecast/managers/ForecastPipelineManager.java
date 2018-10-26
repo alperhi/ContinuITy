@@ -9,17 +9,22 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.TimeZone;
 
 import org.apache.commons.math3.util.Pair;
 import org.continuity.api.entities.artifact.ForecastBundle;
 import org.continuity.dsl.description.ForecastInput;
-import org.continuity.dsl.description.ContinuousData;
-import org.continuity.dsl.description.Covariate;
-import org.continuity.dsl.description.Event;
+import org.continuity.dsl.description.FutureNumbers;
+import org.continuity.dsl.description.FutureNumber;
+import org.continuity.dsl.description.UserInput;
+import org.continuity.dsl.description.FutureEvents;
+import org.continuity.dsl.description.FutureEvent;
 import org.continuity.dsl.description.FutureOccurrences;
+import org.continuity.dsl.description.Measurement;
 import org.influxdb.InfluxDB;
 import org.influxdb.dto.Query;
 import org.influxdb.dto.QueryResult;
@@ -56,10 +61,10 @@ public class ForecastPipelineManager {
 	/**
 	 * Constructor.
 	 */
-	public ForecastPipelineManager(InfluxDB influxDb, String tag, ForecastInput context) {
+	public ForecastPipelineManager(InfluxDB influxDb, String tag, ForecastInput forecastInput) {
 		this.influxDb = influxDb;
 		this.tag = tag;
-		this.forecastInput = context;
+		this.forecastInput = forecastInput;
 	}
 	
 	public void setupDatabase(){
@@ -144,33 +149,24 @@ public class ForecastPipelineManager {
 	 * @return
 	 */
 	private int forecastIntensityForUserGroupProphet(int i, Rengine re) {
-		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-		Pair<ArrayList<String>, ArrayList<Double>> datesAndIntensities = getIntensitiesForUserGroupFromDatabaseProphet(i);
-		ArrayList<String> datesOfIntensities = datesAndIntensities.getKey();
-		ArrayList<Double> intensities = datesAndIntensities.getValue();
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		sdf.setTimeZone(TimeZone.getDefault());
 		
-		String endTimeDateString = datesOfIntensities.get(datesOfIntensities.size() - 1);
-		long endTimeIntensities = 0L;
-		try {
-			endTimeIntensities = dateFormat.parse(endTimeDateString).getTime();
-		} catch (ParseException e) {
-		    e.printStackTrace();
+		Pair<ArrayList<Long>, ArrayList<Double>> timestampsAndIntensities = getIntensitiesOfUserGroupFromDatabase(i);
+		ArrayList<Long> timestampsOfIntensities = timestampsAndIntensities.getKey();
+		ArrayList<Double> intensities = timestampsAndIntensities.getValue();
+		
+		Pair<ArrayList<Pair<String, ArrayList<Double>>>, ArrayList<Pair<String, ArrayList<Double>>>> covariates = calculateCovariates(timestampsOfIntensities, intensities);
+		
+		ArrayList<String> datesOfIntensities = new ArrayList<String>();
+		for(long timestamp: timestampsOfIntensities) {
+			Date date = new Date();
+			date.setTime((long) timestamp);
+			String resultDateFromTimestamp = sdf.format(date);
+			datesOfIntensities.add(resultDateFromTimestamp);
 		}
 		
-		long endTimeForecast = this.forecastInput.getForecastOptions().getDateAsTimestamp();
-		
-		long interval = calculateInterval(this.forecastInput.getForecastOptions().getInterval());
-		
-		long startTimeForecast = endTimeIntensities + interval;
-		long forecastTimestamp = startTimeForecast;
-		long endTime = endTimeForecast;
-		ArrayList<Long> futureTimestamps = new ArrayList<Long>();
-		while (forecastTimestamp <= endTime) {
-			futureTimestamps.add(forecastTimestamp);
-			forecastTimestamp += interval;
-		}
-		
-		int intensity = forecastWithProphet(datesOfIntensities, intensities, futureTimestamps.size(), re);
+		int intensity = forecastWithProphet(datesOfIntensities, intensities, covariates.getKey(), covariates.getValue(), re);
 		return intensity;
 	}
 
@@ -181,67 +177,240 @@ public class ForecastPipelineManager {
 	 * @return
 	 */
 	private int forecastIntensityForUserGroupTelescope(int i, Rengine re) {
-		Pair<ArrayList<Long>, ArrayList<Double>> timestampsAndIntensities = getIntensitiesForUserGroupFromDatabaseTelescope(i);
+		Pair<ArrayList<Long>, ArrayList<Double>> timestampsAndIntensities = getIntensitiesOfUserGroupFromDatabase(i);
 		ArrayList<Long> timestampsOfIntensities = timestampsAndIntensities.getKey();
 		ArrayList<Double> intensities = timestampsAndIntensities.getValue();
-		long startTime = timestampsOfIntensities.get(0);
+		
+		Pair<ArrayList<Pair<String, ArrayList<Double>>>, ArrayList<Pair<String, ArrayList<Double>>>> covariates = calculateCovariates(timestampsOfIntensities, intensities);
+		
+		int intensity = forecastWithTelescope(intensities, covariates.getKey(), covariates.getValue(), re);
+		return intensity;
+	}
+	
+	/**
+	 * Calculates historical and future covariates.
+	 * @param timestampsOfIntensities
+	 * @param intensities
+	 * @return
+	 */
+	private Pair<ArrayList<Pair<String, ArrayList<Double>>>, ArrayList<Pair<String, ArrayList<Double>>>> calculateCovariates(
+			ArrayList<Long> timestampsOfIntensities, ArrayList<Double> intensities) {
+		long startTimeOfIntensities = timestampsOfIntensities.get(0);
 		long endTimeIntensities = timestampsOfIntensities.get(timestampsOfIntensities.size() - 1);
 		
 		long endTimeForecast = this.forecastInput.getForecastOptions().getDateAsTimestamp();
 		
 		long interval = calculateInterval(this.forecastInput.getForecastOptions().getInterval());
 		
+		// Calculates considered future timestamps
 		long startTimeForecast = endTimeIntensities + interval;
 		long forecastTimestamp = startTimeForecast;
-		long endTime = endTimeForecast;
 		ArrayList<Long> futureTimestamps = new ArrayList<Long>();
-		while (forecastTimestamp <= endTime) {
+		while (forecastTimestamp <= endTimeForecast) {
 			futureTimestamps.add(forecastTimestamp);
 			forecastTimestamp += interval;
 		}
 		
-		ArrayList<ArrayList<Double>> histCovariates = new ArrayList<ArrayList<Double>>();
-		ArrayList<ArrayList<Double>> futureCovariates = new ArrayList<ArrayList<Double>>();
-		if(forecastInput.getCovariates() != null) {
-			for(Covariate covar: forecastInput.getCovariates()) {
-				ArrayList<Double> historicalOccurrences = null;
-				ArrayList<Double> futureOccurrences = null;
-				if(covar instanceof ContinuousData) {
-					historicalOccurrences = new ArrayList<Double>();
-					ContinuousData contCovar = (ContinuousData) covar;
+		ArrayList<Pair<String, ArrayList<Double>>> histCovariates = new ArrayList<Pair<String, ArrayList<Double>>>();
+		ArrayList<Pair<String, ArrayList<Double>>> futureCovariates = new ArrayList<Pair<String, ArrayList<Double>>>();
+		
+		if(forecastInput.getContext() != null) {
+			for(UserInput covar: forecastInput.getContext()) {	
+				if(covar instanceof FutureNumbers) {
+					FutureNumbers numCovar = (FutureNumbers) covar;
 					
-					historicalOccurrences = getContinuousMeasurements(contCovar, convertTimestampToUtcDate(startTime), convertTimestampToUtcDate(endTimeIntensities));
-					futureOccurrences = getContinuousMeasurements(contCovar, convertTimestampToUtcDate(startTimeForecast), convertTimestampToUtcDate(endTimeForecast));
-				} else {
-					Event eventCovar = (Event) covar;
-					// calculate historical occurrences
-					historicalOccurrences = new ArrayList<Double>(Collections.nCopies(timestampsOfIntensities.size(), 0.0));
-					ArrayList<Long> timestampsOfCovar = getCovariateData(eventCovar, convertTimestampToUtcDate(startTime), convertTimestampToUtcDate(endTimeIntensities));
-					for(long timestamp: timestampsOfCovar) {
-						int index = timestampsOfIntensities.indexOf(timestamp);
-						historicalOccurrences.set(index, 1.0);
+					ArrayList<Double> historicalOccurrences = calculateHistoricalOccurrencesNumerical(numCovar, timestampsOfIntensities, startTimeOfIntensities, endTimeIntensities); 
+					ArrayList<Double> futureOccurrences = calculateFutureOccurrencesNumerical(numCovar, futureTimestamps, startTimeForecast, endTimeForecast);
+					
+					List<FutureNumber> numericInstances = numCovar.getFuture();
+					
+					for(FutureNumber numInstance: numericInstances) {
+						double value = numInstance.getValue();
+						FutureOccurrences futureTimes = numInstance.getTime();
+						List<Long> futureTimestampsOfValue = futureTimes.getFutureDatesAsTimestamps(interval);
+						
+						for(long futureTimestampOfValue: futureTimestampsOfValue) {
+							int index = futureTimestamps.indexOf(futureTimestampOfValue);
+							futureOccurrences.set(index, value);
+						}
 					}
-					FutureOccurrences future = eventCovar.getFutureDates();
+					Pair<String, ArrayList<Double>> covarPast = new Pair<>(numCovar.getMeasurement(), historicalOccurrences);
+					Pair<String, ArrayList<Double>> covarFuture = new Pair<>(numCovar.getMeasurement(), futureOccurrences);
+					histCovariates.add(covarPast);
+					futureCovariates.add(covarFuture);
 					
-					List<Long> futureTimestampsOfCovar = future.getFutureDatesAsTimestamps(interval);			
+				} else if(covar instanceof FutureEvents) {
+					FutureEvents stringCovar = (FutureEvents) covar;
+					List<FutureEvent> stringInstances = stringCovar.getFuture();
 					
-					// calculate future occurrences
-					futureOccurrences = new ArrayList<Double>(Collections.nCopies(futureTimestamps.size(), 0.0));
-					for(long futureTimestampOfCovar: futureTimestampsOfCovar) {
-						int index = futureTimestamps.indexOf(futureTimestampOfCovar);
-						futureOccurrences.set(index, 1.0);
+					HashMap<String, ArrayList<Long>> eventMap = calculateEventMap(stringCovar, startTimeOfIntensities, endTimeIntensities, startTimeForecast, endTimeForecast); 
+					
+					for (Map.Entry<String, ArrayList<Long>> entry : eventMap.entrySet()) {
+					    String value = entry.getKey();
+					    ArrayList<Long> timestamps = entry.getValue();
+					    
+					    ArrayList<Double> historicalOccurrences = new ArrayList<Double>(Collections.nCopies(timestampsOfIntensities.size(), 0.0));
+					    ArrayList<Double> futureOccurrences = new ArrayList<Double>(Collections.nCopies(futureTimestamps.size(), 0.0));
+			    		
+					    calculateOccurrencesString(futureOccurrences, historicalOccurrences, timestamps, timestampsOfIntensities, futureTimestamps, endTimeIntensities);
+					    
+						for(FutureEvent stringInstance: stringInstances) {
+							String valueOfInstance = stringInstance.getValue();
+							if(valueOfInstance.equals(value)) {
+								FutureOccurrences futureTimes = stringInstance.getTime();
+								List<Long> futureTimestampsOfValue = futureTimes.getFutureDatesAsTimestamps(interval);
+								
+								for(long futureTimestampOfValue: futureTimestampsOfValue) {
+									int index = futureTimestamps.indexOf(futureTimestampOfValue);
+									futureOccurrences.set(index, 1.0);
+								}
+							}
+						}
+						Pair<String, ArrayList<Double>> covarPast = new Pair<>(value, historicalOccurrences);
+						Pair<String, ArrayList<Double>> covarFuture = new Pair<>(value, futureOccurrences);
+						histCovariates.add(covarPast);
+						futureCovariates.add(covarFuture);
 					}
+					
+				} else if(covar instanceof Measurement) {
+					Measurement mCovar = (Measurement) covar;
+					boolean isNumeric = identifyIfNumericValues(mCovar);
+					if(isNumeric) {
+
+						ArrayList<Double> historicalOccurrences = calculateHistoricalOccurrencesNumerical(mCovar, timestampsOfIntensities, startTimeOfIntensities, endTimeIntensities); 
+						ArrayList<Double> futureOccurrences = calculateFutureOccurrencesNumerical(mCovar, futureTimestamps, startTimeForecast, endTimeForecast);
+		
+						Pair<String, ArrayList<Double>> covarPast = new Pair<>(mCovar.getMeasurement(), historicalOccurrences);
+						Pair<String, ArrayList<Double>> covarFuture = new Pair<>(mCovar.getMeasurement(), futureOccurrences);
+						histCovariates.add(covarPast);
+						futureCovariates.add(covarFuture);
+						
+					} else {
+						
+						HashMap<String, ArrayList<Long>> eventMap = calculateEventMap(mCovar, startTimeOfIntensities, endTimeIntensities, startTimeForecast, endTimeForecast); 
+						
+						for (Map.Entry<String, ArrayList<Long>> entry : eventMap.entrySet()) {
+						    ArrayList<Long> timestamps = entry.getValue();
+						    
+						    ArrayList<Double> historicalOccurrences = new ArrayList<Double>(Collections.nCopies(timestampsOfIntensities.size(), 0.0));
+						    ArrayList<Double> futureOccurrences = new ArrayList<Double>(Collections.nCopies(futureTimestamps.size(), 0.0));
+						    		
+						    calculateOccurrencesString(futureOccurrences, historicalOccurrences, timestamps, timestampsOfIntensities, futureTimestamps, endTimeIntensities);
+						    
+							Pair<String, ArrayList<Double>> covarPast = new Pair<>(entry.getKey(), historicalOccurrences);
+							Pair<String, ArrayList<Double>> covarFuture = new Pair<>(entry.getKey(), futureOccurrences);
+							histCovariates.add(covarPast);
+							futureCovariates.add(covarFuture);
+						}
+					}	
 				}
-				histCovariates.add(historicalOccurrences);
-				futureCovariates.add(futureOccurrences);
 			}
 		}
-		int intensity = forecastWithTelescope(intensities, histCovariates, futureCovariates, re);
-		return intensity;
+		Pair<ArrayList<Pair<String, ArrayList<Double>>>, ArrayList<Pair<String, ArrayList<Double>>>> covariates = new Pair<>(histCovariates, futureCovariates);
+		return covariates;
 	}
 	
 	/**
-	 * Passes intensities dataset and covariates to Pophet which does the forecasting.
+	 * Calculates occurrences for Strings.
+	 * @param futureOccurrences
+	 * @param historicalOccurrences
+	 * @param timestamps
+	 * @param timestampsOfIntensities
+	 * @param futureTimestamps
+	 * @param endTimeIntensities
+	 */
+	private void calculateOccurrencesString(ArrayList<Double> futureOccurrences, ArrayList<Double> historicalOccurrences, ArrayList<Long> timestamps, 
+			ArrayList<Long> timestampsOfIntensities, ArrayList<Long> futureTimestamps, long endTimeIntensities) {
+	    
+		for(long timestamp: timestamps) {
+			if(timestamp <= endTimeIntensities) {
+				int index = timestampsOfIntensities.indexOf(timestamp);
+				historicalOccurrences.set(index, 1.0);
+			} else {
+				int index = futureTimestamps.indexOf(timestamp);
+				futureOccurrences.set(index, 1.0);
+			}
+		}
+	}
+
+	/**
+	 * Calculates a HashMap containing all event (String) covariates.
+	 * @param mCovar
+	 * @param startTime
+	 * @param endTimeIntensities
+	 * @param startTimeForecast
+	 * @param endTimeForecast
+	 * @return
+	 */
+	private HashMap<String, ArrayList<Long>> calculateEventMap(Measurement mCovar, long startTime, long endTimeIntensities, long startTimeForecast, long endTimeForecast) {
+		HashMap<String, ArrayList<Long>> eventMap = new HashMap<String, ArrayList<Long>>();
+		
+		ArrayList<Pair<Long, String>> histValues = getStringValues(mCovar, convertTimestampToUtcDate(startTime), convertTimestampToUtcDate(endTimeIntensities));
+		ArrayList<Pair<Long, String>> futValues = getStringValues(mCovar, convertTimestampToUtcDate(startTimeForecast), convertTimestampToUtcDate(endTimeForecast));
+
+		for (Pair<Long, String> histValue: histValues) {
+			String value = histValue.getValue();
+			long timestamp = histValue.getKey();
+			if (eventMap.containsKey(value)) {
+				eventMap.get(value).add(timestamp);
+			} else {
+				ArrayList<Long> timestamps = new ArrayList<Long>();
+				timestamps.add(timestamp);
+				eventMap.put(value, timestamps);
+			}
+		}
+		
+		// Only future values where corresponding past values exist
+		for (Pair<Long, String> futValue: futValues) {
+			String value = futValue.getValue();
+			if(eventMap.containsKey(value)) {
+				eventMap.get(value).add(futValue.getKey());
+			}
+		}
+		return eventMap;
+	}
+
+	/**
+	 * Calculates historical occurrences for doubles.
+	 * @param mCovar
+	 * @param timestampsOfIntensities
+	 * @param startTime
+	 * @param endTimeIntensities
+	 * @return
+	 */
+	private ArrayList<Double> calculateHistoricalOccurrencesNumerical(Measurement mCovar, ArrayList<Long> timestampsOfIntensities, long startTime, long endTimeIntensities) {
+		ArrayList<Double> historicalOccurrences = new ArrayList<Double>(Collections.nCopies(timestampsOfIntensities.size(), 0.0));
+		ArrayList<Pair<Long, Double>> histValues = getNumericValues(mCovar, convertTimestampToUtcDate(startTime), convertTimestampToUtcDate(endTimeIntensities));
+		
+		for(Pair<Long, Double> histValue: histValues) {
+			int index = timestampsOfIntensities.indexOf(histValue.getKey());
+			historicalOccurrences.set(index, histValue.getValue());
+		}
+		
+		return historicalOccurrences;
+	}
+
+	/**
+	 * Calculates future occurrences for doubles.
+	 * @param mCovar
+	 * @param futureTimestamps
+	 * @param startTimeForecast
+	 * @param endTimeForecast
+	 * @return
+	 */
+	private ArrayList<Double> calculateFutureOccurrencesNumerical(Measurement mCovar, ArrayList<Long> futureTimestamps, long startTimeForecast, long endTimeForecast) {
+		ArrayList<Double> futureOccurrences = new ArrayList<Double>(Collections.nCopies(futureTimestamps.size(), 0.0));
+		ArrayList<Pair<Long, Double>> futValues = getNumericValues(mCovar, convertTimestampToUtcDate(startTimeForecast), convertTimestampToUtcDate(endTimeForecast));
+
+		for(Pair<Long, Double> futValue: futValues) {
+			int index = futureTimestamps.indexOf(futValue.getKey());
+			futureOccurrences.set(index, futValue.getValue());
+		}
+		return futureOccurrences;
+	}
+
+	/**
+	 * Passes intensities dataset and covariates to Prophet which does the forecasting.
 	 * Aggregates the resulting intensities to one intensity value.
 	 * @param datesOfIntensities
 	 * @param intensitiesOfUserGroup
@@ -249,42 +418,55 @@ public class ForecastPipelineManager {
 	 * @param re
 	 * @return
 	 */
-	private int forecastWithProphet(ArrayList<String> datesOfIntensities, ArrayList<Double> intensitiesOfUserGroup, int size,
-			Rengine re) {
+	private int forecastWithProphet(ArrayList<String> datesOfIntensities, ArrayList<Double> intensitiesOfUserGroup, ArrayList<Pair<String, ArrayList<Double>>> covariates,
+			ArrayList<Pair<String, ArrayList<Double>>> futureCovariates, Rengine re) {
 	
 		double[] intensities = intensitiesOfUserGroup.stream().mapToDouble(i -> i).toArray();
 		String[] dates = new String[datesOfIntensities.size()];
 		dates = datesOfIntensities.toArray(dates);
 		
-		String period = Integer.toString(size);
-		
 		re.assign("dates", dates);
 		re.assign("intensities", intensities);
+		
+		re.eval("source(\"prophet/InitializeVariables.R\")");
+		
+		for(Pair<String, ArrayList<Double>> covariate: covariates) {
+			double[] values = covariate.getValue().stream().mapToDouble(i -> i).toArray();
+			re.assign("values", values);
+			re.assign("covarname", covariate.getKey());
+			re.eval("source(\"prophet/AddRegressors.R\")");
+		}
+		
+		String period = Integer.toString(futureCovariates.get(0).getValue().size());
 		re.assign("period", period);
+		
+		re.eval("source(\"prophet/FitModelAndCreateFutureDataframe.R\")");
+		
+		int x = 0;
+		for(Pair<String, ArrayList<Double>> covariate: covariates) {
+			covariate.getValue().addAll(futureCovariates.get(x).getValue());
+			double[] values = covariate.getValue().stream().mapToDouble(i -> i).toArray();
+			re.assign("values", values);
+			re.assign("covarname", covariate.getKey());
+			re.eval("source(\"prophet/ExtendFutureDataframe.R\")");
+			x++;
+		}
+		
 		re.eval("source(\"prophet/ForecastProphet.R\")");
 		
 		double[] forecastedIntensities = re.eval("forecastValues").asDoubleArray();
 		
-		// TODO: Check other possibilities for workload aggregation. Information should be passed by user.
-		double maxIntensity = 0;
-		for(int i = 0; i < forecastedIntensities.length; i++) {
-			if(forecastedIntensities[i] > maxIntensity) {
-				maxIntensity = forecastedIntensities[i];
-			}
-		}
-		
-		int intensity = (int) Math.round(maxIntensity);
-
-		return intensity;
+		return aggregateWorkload(forecastedIntensities); 
 	}
-	
+
 	/**
 	 * Passes intensities dataset and covariates to Telescope which does the forecasting.
 	 * Aggregates the resulting intensities to one intensity value.
 	 * @param intensitiesOfUserGroup
 	 * @return
 	 */
-	private int forecastWithTelescope(ArrayList<Double> intensitiesOfUserGroup, ArrayList<ArrayList<Double>> covariates, ArrayList<ArrayList<Double>> futureCovariates, Rengine re) {	
+	private int forecastWithTelescope(ArrayList<Double> intensitiesOfUserGroup, ArrayList<Pair<String, ArrayList<Double>>> covariates, ArrayList<Pair<String, 
+			ArrayList<Double>>> futureCovariates, Rengine re) {	
 		if(covariates.size() > 0) {
 			// hist.covar
 			String matrixString = calculateMatrix("hist", covariates, re);
@@ -297,7 +479,7 @@ public class ForecastPipelineManager {
 		
 		double[] intensities = intensitiesOfUserGroup.stream().mapToDouble(i -> i).toArray();
 		
-		String period = Integer.toString(futureCovariates.get(0).size());
+		String period = Integer.toString(futureCovariates.get(0).getValue().size());
 		
 		re.assign("intensities", intensities);
 		re.assign("period", period);
@@ -306,27 +488,38 @@ public class ForecastPipelineManager {
 		
 		double[] forecastedIntensities = re.eval("forecastValues").asDoubleArray();
 		
-		// TODO: Check other possibilities for workload aggregation. Information should be passed by user.
+		return aggregateWorkload(forecastedIntensities);
+	}
+	
+	/**
+	 * Aggregates the forecasted workload.
+	 * TODO: Check other possibilities for workload aggregation. Information should be passed by user.
+	 * @param forecastedIntensities
+	 * @return
+	 */
+	private int aggregateWorkload(double[] forecastedIntensities) {
 		double maxIntensity = 0;
 		for(int i = 0; i < forecastedIntensities.length; i++) {
 			if(forecastedIntensities[i] > maxIntensity) {
 				maxIntensity = forecastedIntensities[i];
 			}
 		}
-		
-		int intensity = (int) Math.round(maxIntensity);
-
-		return intensity;
+		return (int) Math.round(maxIntensity);
 	}
 	
-	private String calculateMatrix(String string, ArrayList<ArrayList<Double>> covariates, Rengine re) {
-		int x = 0;
+	/**
+	 * Calculates a covariate matrix. Such a matrix is an input to Telescope.
+	 * @param string
+	 * @param covariates
+	 * @param re
+	 * @return
+	 */
+	private String calculateMatrix(String string, ArrayList<Pair<String, ArrayList<Double>>> covariates, Rengine re) {
 		ArrayList<String> nameOfCovars = new ArrayList<String>();
-		for(ArrayList<Double> covariateValues: covariates) {
-			String name = string + ".covar" + x;
-			double[] occurrences = covariateValues.stream().mapToDouble(i -> i).toArray();
+		for(Pair<String, ArrayList<Double>> covariateValues: covariates) {
+			String name = covariateValues.getKey() + "." + string;
+			double[] occurrences = covariateValues.getValue().stream().mapToDouble(i -> i).toArray();
 			re.assign(name, occurrences);
-			x++;
 			nameOfCovars.add(name);
 		}
 		
@@ -345,6 +538,11 @@ public class ForecastPipelineManager {
 		return matrixString;
 	}
 	
+	/**
+	 * Returns interval in numerical representation.
+	 * @param interval
+	 * @return
+	 */
 	private long calculateInterval(String interval) {
 		long numericInterval = 0;
 		switch(interval) {
@@ -373,72 +571,105 @@ public class ForecastPipelineManager {
 		String date = Instant.ofEpochMilli(timestamp).atOffset(ZoneOffset.UTC).format(dtf).toString();
 		return date;
 	}
+	
+	/**
+	 * Tests if values in a measurement are numerical.
+	 * @param mCovar
+	 * @return
+	 */
+	private boolean identifyIfNumericValues(Measurement mCovar) {
+		String measurementName = mCovar.getMeasurement();
+		String queryString = "SELECT time, value FROM " + measurementName;
+		Query query = new Query(queryString, tag);
+		QueryResult queryResult = influxDb.query(query);
+		Result result = queryResult.getResults().get(0);
+		if(result.getSeries() != null) {
+			Series serie = result.getSeries().get(0);
+			if(serie.getValues().get(0).get(1).getClass().toString().equalsIgnoreCase("class java.lang.Double")) {
+				return true;
+			}	
+		}
+		return false;
+	}
 
 	/**
-	 * Gets continuous measurements from database.
+	 * Gets numeric values from database.
 	 * @param covariateValues
 	 * @param covar
 	 * @param startTime
 	 * @param endTime
 	 * @return
 	 */
-	private ArrayList<Double> getContinuousMeasurements(ContinuousData contCovar, String startTime, String endTime) {
-		ArrayList<Double> measurements = new ArrayList<Double>();
-		String measurementName = contCovar.getLocationName();
+	private ArrayList<Pair<Long, Double>> getNumericValues(Measurement covar, String startTime, String endTime) {
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+		sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+		ArrayList<Pair<Long, Double>> measurements = new ArrayList<Pair<Long, Double>>();
+		String measurementName = covar.getMeasurement();
 		String queryString = "SELECT time, value FROM " + measurementName + " WHERE time >= '" + startTime + "' AND time <= '" + endTime 
 				+"'";
 		Query query = new Query(queryString, tag);
 		QueryResult queryResult = influxDb.query(query);
 		for (Result result : queryResult.getResults()) {
-			for (Series serie : result.getSeries()) {
-				for (List<Object> listTuples : serie.getValues()) {
-					double measurement = (double) listTuples.get(1);
-					measurements.add(measurement);
-				}
-			} 
+			if(result.getSeries() != null) {
+				for (Series serie : result.getSeries()) {
+					for (List<Object> listTuples : serie.getValues()) {
+						long time = 0;
+						try {
+							time = sdf.parse((String) listTuples.get(0)).getTime();
+						} catch (ParseException e) {
+							
+						}
+						double measurement = (double) listTuples.get(1);
+						Pair<Long, Double> timeAndValue = new Pair<>(time, measurement);
+						measurements.add(timeAndValue);
+					}
+				} 	
+			}
 		}
 		return measurements;
 	}
 	
 	/**
-	 * Processes covariate. Gets relevant covariate data from database.
+	 * Gets String values from database.
 	 * @param covar
 	 * @param startTime
 	 * @param endTime
 	 */
-	private ArrayList<Long> getCovariateData(Event eventCovar, String startTime, String endTime) {
+	private ArrayList<Pair<Long, String>> getStringValues(Measurement covar, String startTime, String endTime) {
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
 		sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
-		ArrayList<Long> timestamps = new ArrayList<Long>();
-		String queryString = null; 
-		String value = eventCovar.getCovar();
-		String measurementName = eventCovar.getLocationName();
-		queryString = "SELECT time, value FROM " + measurementName + " WHERE time >= '" + startTime + "' AND time <= '" + endTime 
-			+"' AND value = '" + value + "'";	
+		ArrayList<Pair<Long, String>> events = new ArrayList<Pair<Long, String>>();
+		String measurementName = covar.getMeasurement();
+		String queryString = "SELECT time, value FROM " + measurementName + " WHERE time >= '" + startTime + "' AND time <= '" + endTime 
+				+"'";
 		Query query = new Query(queryString, tag);
 		QueryResult queryResult = influxDb.query(query);
 		for (Result result : queryResult.getResults()) {
-			for (Series serie : result.getSeries()) {
-				for (List<Object> listTuples : serie.getValues()) {
-					long time = 0;
-					try {
-						time = sdf.parse((String) listTuples.get(0)).getTime();
-					} catch (ParseException e) {
-						
+			if(result.getSeries() != null) {
+				for (Series serie : result.getSeries()) {
+					for (List<Object> listTuples : serie.getValues()) {
+						long time = 0;
+						try {
+							time = sdf.parse((String) listTuples.get(0)).getTime();
+						} catch (ParseException e) {
+							
+						}
+						String event = (String) listTuples.get(1);
+						Pair<Long, String> timeAndValue = new Pair<>(time, event);
+						events.add(timeAndValue);
 					}
-					timestamps.add(time);
-				}
+				} 	
 			}
-		}	
-		return timestamps;
+		}
+		return events;
 	}
 
 	/**
-	 * Gets the intensities of user group from database.
+	 * Gets the intensities of a user group from database.
 	 * @param userGroupId
 	 * @return
 	 */
-	public Pair<ArrayList<Long>, ArrayList<Double>> getIntensitiesForUserGroupFromDatabaseTelescope(int userGroupId) {
+	public Pair<ArrayList<Long>, ArrayList<Double>> getIntensitiesOfUserGroupFromDatabase(int userGroupId) {
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
 		sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
 		Pair<ArrayList<Long>, ArrayList<Double>> timestampsAndIntensities = null;
@@ -448,62 +679,26 @@ public class ForecastPipelineManager {
 		Query query = new Query("SELECT time, value FROM " + measurementName, tag);
 		QueryResult queryResult = influxDb.query(query);
 		for (Result result : queryResult.getResults()) {
-			for (Series serie : result.getSeries()) {
-				for (List<Object> listTuples : serie.getValues()) {
-					long time = 0;
-					try {
-						time = sdf.parse((String) listTuples.get(0)).getTime();
-					} catch (ParseException e) {
-						
+			if(result.getSeries() != null) {
+				for (Series serie : result.getSeries()) {
+					for (List<Object> listTuples : serie.getValues()) {
+						long time = 0;
+						try {
+							time = sdf.parse((String) listTuples.get(0)).getTime();
+						} catch (ParseException e) {
+							
+						}
+						double intensity = (double) listTuples.get(1);
+						timestamps.add(time);
+						intensities.add(intensity);
 					}
-					double intensity = (double) listTuples.get(1);
-					timestamps.add(time);
-					intensities.add(intensity);
-				}
+				}	
 			}
 		}	
 		timestampsAndIntensities = new Pair<>(timestamps, intensities);
 		return timestampsAndIntensities;
 	}
 	
-	/**
-	 * Gets the intensities of user group from database.
-	 * @param userGroupId
-	 * @return
-	 */
-	public Pair<ArrayList<String>, ArrayList<Double>> getIntensitiesForUserGroupFromDatabaseProphet(int userGroupId) {
-		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
-		sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
-		
-		SimpleDateFormat sdf2 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-		sdf2.setTimeZone(TimeZone.getDefault());
-		
-		Pair<ArrayList<String>, ArrayList<Double>> timestampsAndIntensities = null;
-		ArrayList<String> dates = new ArrayList<String>();
-		ArrayList<Double> intensities = new ArrayList<Double>();
-		String measurementName = "userGroup" + userGroupId;
-		Query query = new Query("SELECT time, value FROM " + measurementName, tag);
-		QueryResult queryResult = influxDb.query(query);
-		for (Result result : queryResult.getResults()) {
-			for (Series serie : result.getSeries()) {
-				for (List<Object> listTuples : serie.getValues()) {
-					Date utcDate = null;
-					try {
-						utcDate = sdf.parse((String) listTuples.get(0));
-					} catch (ParseException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-					String date = sdf2.format(utcDate);
-					double intensity = (double) listTuples.get(1);
-					dates.add(date);
-					intensities.add(intensity);
-				}
-			}
-		}	
-		timestampsAndIntensities = new Pair<>(dates, intensities);
-		return timestampsAndIntensities;
-	}
 
 	/**
 	 * Initializes Telescope.
@@ -528,7 +723,6 @@ public class ForecastPipelineManager {
 	
 	/**
 	 * Initializes Prophet.
-	 * TODO
 	 * @param re
 	 */
 	private void initializeProphet(Rengine re) {

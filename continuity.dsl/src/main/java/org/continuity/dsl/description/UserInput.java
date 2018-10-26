@@ -5,12 +5,12 @@ import org.continuity.dsl.deserializer.CovariateDeserializer;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
 /**
- * A context covariate.
+ * Context input from user.
  * 
  * @author Alper Hidiroglu
  *
  */
 @JsonDeserialize(using = CovariateDeserializer.class)
-public interface Covariate {
+public interface UserInput {
 
 }

@@ -12,41 +12,38 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
  * @author Alper Hidiroglu
  *
  */
-@JsonPropertyOrder({ "covariates", "forecast-options" })
+@JsonPropertyOrder({ "context", "forecast-options" })
 public class ForecastInput {
 
-	private List<Covariate> covariates;
+	private List<UserInput> context;
 
 	@JsonProperty("forecast-options")
 	private ForecastOptions forecastOptions;
 	
 	@JsonCreator
-    public ForecastInput(@JsonProperty(value = "covariates", required = true) List<Covariate> covariates, @JsonProperty(value = "forecast-options", required = true) ForecastOptions forecastOptions) {
-    	this.covariates = covariates;
+    public ForecastInput(@JsonProperty(value = "context", required = true) List<UserInput> context, 
+    		@JsonProperty(value = "forecast-options", required = true) ForecastOptions forecastOptions) {
+    	this.context = context;
     	this.forecastOptions = forecastOptions;
     }
-	
-	public ForecastInput() {
-		
-	}
 
 	/**
-	 * Returns context covariates for the workload forecasting.
+	 * Returns context for the workload forecasting.
 	 * 
 	 * @return The context covariates.
 	 */
-	public List<Covariate> getCovariates() {
-		return covariates;
+	public List<UserInput> getContext() {
+		return context;
 	}
 
 	/**
-	 * Sets the context covariates for the workload forecasting.
+	 * Sets the context for the workload forecasting.
 	 * 
-	 * @param covariates The context covariates.
+	 * @param context The context covariates.
 	 * 
 	 */
-	public void setCovariates(List<Covariate> covariates) {
-		this.covariates = covariates;
+	public void setContext(List<UserInput> context) {
+		this.context = context;
 	}
 
 	/**
@@ -69,7 +66,7 @@ public class ForecastInput {
 
 	@Override
 	public String toString() {
-		return "Forecast-Input [covariates=" + covariates + ", forecastOptions=" + forecastOptions + "]";
+		return "Forecast-Input [context=" + context + ", forecastOptions=" + forecastOptions + "]";
 	}
 
 }

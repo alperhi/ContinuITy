@@ -11,7 +11,7 @@ import org.apache.commons.math3.util.Pair;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /**
- * Future occurrences of a covariate
+ * Future occurrences of a value.
  * @author Alper Hidiroglu
  */
 public class FutureOccurrences {
