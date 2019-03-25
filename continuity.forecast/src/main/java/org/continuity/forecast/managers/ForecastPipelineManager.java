@@ -791,7 +791,7 @@ public class ForecastPipelineManager {
 		if (re == null) {
 			re = new Rengine(newargs1, false, null);
 		}
-		re.eval(".libPaths('/usr/local/lib/R/site-library/')");
+		re.eval(".libPaths('r-library')");
 		return re;
 	}
 }

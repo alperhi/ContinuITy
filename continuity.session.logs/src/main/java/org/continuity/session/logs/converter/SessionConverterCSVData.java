@@ -92,33 +92,33 @@ public class SessionConverterCSVData {
 				sessions.put(sessionID, newList);
 			}
 		}
-		for (Entry<String, LinkedList<RowObject>> entry : sessions.entrySet()) {
-			String sessionID = entry.getKey();
-			LinkedList<RowObject> rowObjectList = entry.getValue();
-			sortRowObjects(rowObjectList);
-			sessions.put(sessionID, rowObjectList);
-		}		
+//		for (Entry<String, LinkedList<RowObject>> entry : sessions.entrySet()) {
+//			String sessionID = entry.getKey();
+//			LinkedList<RowObject> rowObjectList = entry.getValue();
+//			sortRowObjects(rowObjectList);
+//			sessions.put(sessionID, rowObjectList);
+//		}		
 		return sessions;
 	}
 	
-	/**
-	 * Sorts RowObjects in list.
-	 * @param rowObjects
-	 */
-	private void sortRowObjects(LinkedList<RowObject> rowObjects) {
-		rowObjects.sort((RowObject ro1, RowObject ro2) -> {
-			long startTimeRo1 = Long.parseLong(ro1.getRequestStartTime());
-			long startTimeRo2 = Long.parseLong(ro2.getRequestStartTime());
-			int startTimeComparison = Long.compare(startTimeRo1, startTimeRo2);
-			if (startTimeComparison != 0) {
-				return startTimeComparison;
-			} else {
-				long durationRo1 = Long.parseLong(ro1.getRequestEndTime()) - startTimeRo1;
-				long durationRo2 = Long.parseLong(ro2.getRequestEndTime()) - startTimeRo2;
-				return Double.compare(durationRo1, durationRo2);
-			}
-		});
-	}
+//	/**
+//	 * Sorts RowObjects in list.
+//	 * @param rowObjects
+//	 */
+//	private void sortRowObjects(LinkedList<RowObject> rowObjects) {
+//		rowObjects.sort((RowObject ro1, RowObject ro2) -> {
+//			long startTimeRo1 = Long.parseLong(ro1.getRequestStartTime());
+//			long startTimeRo2 = Long.parseLong(ro2.getRequestStartTime());
+//			int startTimeComparison = Long.compare(startTimeRo1, startTimeRo2);
+//			if (startTimeComparison != 0) {
+//				return startTimeComparison;
+//			} else {
+//				long durationRo1 = Long.parseLong(ro1.getRequestEndTime()) - startTimeRo1;
+//				long durationRo2 = Long.parseLong(ro2.getRequestEndTime()) - startTimeRo2;
+//				return Double.compare(durationRo1, durationRo2);
+//			}
+//		});
+//	}
 
 	/**
 	 * If dataset has no session identifiers, calculate them with the help of user names and request start times.
@@ -128,7 +128,7 @@ public class SessionConverterCSVData {
 	private LinkedHashMap<String, LinkedList<RowObject>> calculateSessionsWithUserNames(ArrayList<RowObject> dataList) {
 		LinkedHashMap<String, LinkedList<RowObject>> sessions = new LinkedHashMap<String, LinkedList<RowObject>>();
 		
-		DateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm");
+		DateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
 
 		String currentUserName = "";
 
@@ -190,7 +190,7 @@ public class SessionConverterCSVData {
 	private LinkedHashMap<String, LinkedList<RowObject>> calculateSessions(ArrayList<RowObject> dataList) {
 		LinkedHashMap<String, LinkedList<RowObject>> sessions = new LinkedHashMap<String, LinkedList<RowObject>>();
 		
-		DateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm");
+		DateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
 
 		String currentSession = "";
 		
@@ -246,7 +246,7 @@ public class SessionConverterCSVData {
 	 * @param rowObject
 	 */
 	private void appendRowObjectInfo(StringBuffer buffer, RowObject rowObject) {
-		DateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm");
+		DateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
 
 		Date startDate = null;
 		Date endDate = null;
